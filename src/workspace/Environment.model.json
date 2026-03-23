@@ -1,0 +1,66 @@
+{
+  "ClassName": "Model",
+  "Children": [
+    {
+      "Name": "Baseplate",
+      "ClassName": "Part",
+      "Properties": {
+        "Size": [1024, 4, 1024],
+        "Position": [0, -2, 0],
+        "Material": "Grass",
+        "Color": [0.2, 0.8, 0.2],
+        "Anchored": true,
+        "CanCollide": true
+      }
+    },
+    {
+      "Name": "ItemShop",
+      "ClassName": "Model",
+      "Children": [
+        {
+          "Name": "Building",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [15, 8, 12],
+            "Position": [-60, 4, -50],
+            "Material": "Brick",
+            "Color": [0.2, 0.5, 1],
+            "Anchored": true,
+            "CanCollide": true
+          }
+        }
+      ]
+    },
+    {
+      "Name": "QuestBoard",
+      "ClassName": "Part",
+      "Properties": {
+        "Size": [6, 8, 1],
+        "Position": [0, 4, -80],
+        "Material": "Wood",
+        "Color": [0.4, 0.25, 0.1],
+        "Anchored": true,
+        "CanCollide": true
+      }
+    },
+    {
+      "Name": "BreedingStation",
+      "ClassName": "Model",
+      "Children": [
+        {
+          "Name": "Platform",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [12, 2, 12],
+            "Position": [0, 1, 80],
+            "Material": "Marble",
+            "Color": [0.7, 0.6, 1],
+            "Anchored": true,
+            "CanCollide": true,
+            "Shape": "Cylinder"
+          }
+        }
+      ]
+    }
+  ]
+}

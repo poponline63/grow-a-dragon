@@ -1,0 +1,38 @@
+{
+  "name": "grow-a-dragon-v2",
+  "tree": {
+    "$className": "DataModel",
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "$path": "src/server"
+    },
+    "StarterPlayerScripts": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts", 
+        "$path": "src/client"
+      }
+    },
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "Shared": {
+        "$className": "Folder",
+        "$path": "src/shared"
+      },
+      "RemoteEvents": {
+        "$className": "Folder"
+      },
+      "RemoteFunctions": {
+        "$className": "Folder"
+      }
+    },
+    "StarterGui": {
+      "$className": "StarterGui",
+      "$path": "src/gui"
+    },
+    "Workspace": {
+      "$className": "Workspace",
+      "$path": "src/workspace"
+    }
+  }
+}

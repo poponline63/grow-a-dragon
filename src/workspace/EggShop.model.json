@@ -1,0 +1,125 @@
+{
+  "ClassName": "Model",
+  "Children": [
+    {
+      "Name": "Foundation",
+      "ClassName": "Part",
+      "Properties": {
+        "Size": [20, 1, 15],
+        "Position": [60, 0.5, -50],
+        "Material": "Cobblestone",
+        "Color": [0.4, 0.4, 0.4],
+        "Anchored": true,
+        "CanCollide": true
+      }
+    },
+    {
+      "Name": "Walls",
+      "ClassName": "Model",
+      "Children": [
+        {
+          "Name": "BackWall",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [20, 8, 1],
+            "Position": [60, 5, -57.5],
+            "Material": "Brick",
+            "Color": [0.6, 0.3, 0.2],
+            "Anchored": true,
+            "CanCollide": true
+          }
+        },
+        {
+          "Name": "LeftWall", 
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [1, 8, 15],
+            "Position": [50.5, 5, -50],
+            "Material": "Brick",
+            "Color": [0.6, 0.3, 0.2],
+            "Anchored": true,
+            "CanCollide": true
+          }
+        },
+        {
+          "Name": "RightWall",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [1, 8, 15],
+            "Position": [69.5, 5, -50],
+            "Material": "Brick", 
+            "Color": [0.6, 0.3, 0.2],
+            "Anchored": true,
+            "CanCollide": true
+          }
+        }
+      ]
+    },
+    {
+      "Name": "Roof",
+      "ClassName": "Part",
+      "Properties": {
+        "Size": [22, 1, 17],
+        "Position": [60, 9.5, -50],
+        "Material": "Wood",
+        "Color": [0.4, 0.25, 0.1],
+        "Anchored": true,
+        "CanCollide": true
+      },
+      "Children": [
+        {
+          "Name": "SpecialMesh",
+          "ClassName": "SpecialMesh",
+          "Properties": {
+            "MeshType": "Wedge"
+          }
+        }
+      ]
+    },
+    {
+      "Name": "EggPedestals",
+      "ClassName": "Model",
+      "Children": [
+        {
+          "Name": "Pedestal1",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [2, 3, 2],
+            "Position": [55, 2.5, -45],
+            "Material": "Marble",
+            "Color": [0.9, 0.9, 0.9],
+            "Anchored": true,
+            "CanCollide": true,
+            "Shape": "Cylinder"
+          }
+        },
+        {
+          "Name": "Pedestal2", 
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [2, 3, 2],
+            "Position": [60, 2.5, -45],
+            "Material": "Marble",
+            "Color": [0.9, 0.9, 0.9],
+            "Anchored": true,
+            "CanCollide": true,
+            "Shape": "Cylinder"
+          }
+        },
+        {
+          "Name": "Pedestal3",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [2, 3, 2],
+            "Position": [65, 2.5, -45],
+            "Material": "Marble",
+            "Color": [0.9, 0.9, 0.9],
+            "Anchored": true,
+            "CanCollide": true,
+            "Shape": "Cylinder"
+          }
+        }
+      ]
+    }
+  ]
+}
