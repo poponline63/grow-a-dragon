@@ -1,193 +1,358 @@
--- EggData.lua - Egg definitions with rarity weight tables
-local Config = require(script.Parent.Config)
+--[[
+    EggData.lua
+    Egg system definitions and hatching mechanics for V3
+]]
 
+local Config = require(script.Parent.Config)
+local DragonData = require(script.Parent.DragonData)
 local EggData = {}
 
--- Egg tier definitions with rarity weight tables
-EggData.Tiers = {
-    Common = {
-        Name = "Stone Egg",
+--------------------------------------------------------------------------------
+-- Egg Definitions
+--------------------------------------------------------------------------------
+EggData.EggTypes = {
+    ["Stone Egg"] = {
         Price = 100,
-        HatchTime = 300, -- 5 minutes
-        Color = Color3.new(0.7, 0.7, 0.7),
-        Description = "A rough stone egg. What could be inside?",
+        Currency = "Coins",
+        HatchTime = 60, -- 1 minute
+        AvailableIn = {"Enchanted Meadow"},
+        PossibleElements = {"Fire", "Nature"},
         RarityWeights = {
-            Common = 70,
-            Uncommon = 25,
-            Rare = 5,
-            Epic = 0,
-            Legendary = 0,
-            Mythic = 0
+            Common = 0.5,
+            Uncommon = 0.3,
+            Rare = 0.2,
+            Epic = 0.0,
+            Legendary = 0.0,
+            Mythic = 0.0,
+            Huge = 0.0
         }
     },
     
-    Uncommon = {
-        Name = "Clay Egg",
-        Price = 250,
-        HatchTime = 600, -- 10 minutes
-        Color = Color3.new(0.8, 0.6, 0.4),
-        Description = "A smooth clay egg with mysterious markings.",
-        RarityWeights = {
-            Common = 40,
-            Uncommon = 45,
-            Rare = 13,
-            Epic = 2,
-            Legendary = 0,
-            Mythic = 0
-        }
-    },
-    
-    Rare = {
-        Name = "Crystal Egg",
+    ["Crystal Egg"] = {
         Price = 500,
-        HatchTime = 900, -- 15 minutes
-        Color = Color3.new(0.4, 0.8, 1),
-        Description = "A beautiful crystal egg that shimmers with inner light.",
+        Currency = "Coins", 
+        HatchTime = 5 * 60, -- 5 minutes
+        AvailableIn = {"Crystal Caverns"},
+        PossibleElements = {"Ice", "Storm"},
         RarityWeights = {
-            Common = 20,
-            Uncommon = 35,
-            Rare = 35,
-            Epic = 9,
-            Legendary = 1,
-            Mythic = 0
+            Common = 0.3,
+            Uncommon = 0.4,
+            Rare = 0.25,
+            Epic = 0.05,
+            Legendary = 0.0,
+            Mythic = 0.0,
+            Huge = 0.0
         }
     },
     
-    Epic = {
-        Name = "Enchanted Egg",
-        Price = 1000,
-        HatchTime = 1800, -- 30 minutes
-        Color = Color3.new(0.6, 0.2, 1),
-        Description = "An egg pulsing with magical energy and ancient runes.",
-        RarityWeights = {
-            Common = 10,
-            Uncommon = 20,
-            Rare = 40,
-            Epic = 25,
-            Legendary = 4.5,
-            Mythic = 0.5
-        }
-    },
-    
-    Legendary = {
-        Name = "Golden Egg",
+    ["Shadow Egg"] = {
         Price = 2500,
-        HatchTime = 3600, -- 1 hour
-        Color = Color3.new(1, 0.8, 0),
-        Description = "A magnificent golden egg that radiates power.",
+        Currency = "Coins",
+        HatchTime = 15 * 60, -- 15 minutes  
+        AvailableIn = {"Shadow Realm"},
+        PossibleElements = {"Shadow", "Light"},
         RarityWeights = {
-            Common = 5,
-            Uncommon = 10,
-            Rare = 25,
-            Epic = 40,
-            Legendary = 18,
-            Mythic = 2
+            Common = 0.2,
+            Uncommon = 0.3, 
+            Rare = 0.35,
+            Epic = 0.13,
+            Legendary = 0.02,
+            Mythic = 0.0,
+            Huge = 0.0
         }
     },
     
-    Mythic = {
-        Name = "Celestial Egg",
-        Price = 5000,
-        HatchTime = 7200, -- 2 hours
-        Color = Color3.new(1, 0.2, 0.2),
-        Description = "A legendary egg said to contain the essence of gods.",
+    ["Golden Egg"] = {
+        Price = 10000,
+        Currency = "Coins",
+        HatchTime = 30 * 60, -- 30 minutes
+        AvailableIn = {"Sky Temple"},
+        PossibleElements = {"Fire", "Ice", "Nature", "Shadow", "Light", "Storm"},
         RarityWeights = {
-            Common = 0,
-            Uncommon = 5,
-            Rare = 15,
-            Epic = 30,
-            Legendary = 40,
-            Mythic = 10
+            Common = 0.1,
+            Uncommon = 0.2,
+            Rare = 0.4,
+            Epic = 0.25,
+            Legendary = 0.049,
+            Mythic = 0.001,
+            Huge = 0.0
+        }
+    },
+    
+    ["Mythic Egg"] = {
+        Price = 50000,
+        Currency = "Coins", 
+        HatchTime = 60 * 60, -- 1 hour
+        AvailableIn = {"Dragon's Peak"},
+        PossibleElements = {"Fire", "Ice", "Nature", "Shadow", "Light", "Storm"},
+        RarityWeights = {
+            Common = 0.05,
+            Uncommon = 0.1,
+            Rare = 0.3,
+            Epic = 0.4,
+            Legendary = 0.139,
+            Mythic = 0.01,
+            Huge = 0.001
+        }
+    },
+    
+    ["Event Egg"] = {
+        Price = 100,
+        Currency = "Essence",
+        HatchTime = 10 * 60, -- 10 minutes
+        AvailableIn = {"Special"},
+        PossibleElements = {"Fire", "Ice", "Nature", "Shadow", "Light", "Storm"},
+        RarityWeights = {
+            Common = 0.0,
+            Uncommon = 0.0,
+            Rare = 0.2,
+            Epic = 0.5,
+            Legendary = 0.25,
+            Mythic = 0.049,
+            Huge = 0.001
         }
     }
 }
 
--- Helper function to get egg tier by name
-function EggData:GetTier(tierName)
-    return self.Tiers[tierName]
-end
-
--- Helper function to get all available tiers
-function EggData:GetAllTiers()
-    local tiers = {}
-    for tierName, tierData in pairs(self.Tiers) do
-        tierData.TierName = tierName
-        table.insert(tiers, tierData)
+--------------------------------------------------------------------------------
+-- Hatching System
+--------------------------------------------------------------------------------
+function EggData.CreateEgg(eggType, playerId)
+    local eggTemplate = EggData.EggTypes[eggType]
+    if not eggTemplate then
+        return nil, "Invalid egg type"
     end
     
-    -- Sort by price
-    table.sort(tiers, function(a, b)
-        return a.Price < b.Price
-    end)
+    local egg = {
+        Type = eggType,
+        PlayerId = playerId,
+        StartTime = tick(),
+        HatchTime = eggTemplate.HatchTime,
+        IsHatching = false,
+        Position = nil, -- Will be set when placed in incubator
+        UniqueId = game:GetService("HttpService"):GenerateGUID(false)
+    }
     
-    return tiers
+    return egg, "Egg created"
 end
 
--- Helper function to calculate rarity odds text for UI
-function EggData:GetRarityOddsText(tierName)
-    local tier = self:GetTier(tierName)
-    if not tier then return "Unknown odds" end
-    
-    local weights = tier.RarityWeights
-    local totalWeight = 0
-    for _, weight in pairs(weights) do
-        totalWeight = totalWeight + weight
+function EggData.StartHatching(egg)
+    if egg.IsHatching then
+        return false, "Egg is already hatching"
     end
     
-    local odds = {}
-    for rarity, weight in pairs(weights) do
-        if weight > 0 then
-            local percentage = (weight / totalWeight) * 100
-            if percentage >= 1 then
-                table.insert(odds, string.format("%s: %.0f%%", rarity, percentage))
-            else
-                table.insert(odds, string.format("%s: %.1f%%", rarity, percentage))
-            end
+    egg.IsHatching = true
+    egg.StartTime = tick()
+    return true, "Hatching started"
+end
+
+function EggData.GetHatchProgress(egg)
+    if not egg.IsHatching then
+        return 0
+    end
+    
+    local elapsed = tick() - egg.StartTime
+    local progress = math.min(elapsed / egg.HatchTime, 1.0)
+    return progress
+end
+
+function EggData.IsReadyToHatch(egg)
+    return egg.IsHatching and EggData.GetHatchProgress(egg) >= 1.0
+end
+
+function EggData.HatchEgg(egg, luckyBonus)
+    luckyBonus = luckyBonus or false
+    
+    if not EggData.IsReadyToHatch(egg) then
+        return nil, "Egg is not ready to hatch"
+    end
+    
+    local eggTemplate = EggData.EggTypes[egg.Type]
+    
+    -- Roll for rarity
+    local rarity = EggData.RollRarity(eggTemplate.RarityWeights, luckyBonus)
+    
+    -- Roll for element
+    local element = eggTemplate.PossibleElements[math.random(#eggTemplate.PossibleElements)]
+    
+    -- Roll for shiny (1% base chance, 2% with lucky)
+    local variant = "Normal"
+    local shinyChance = luckyBonus and 0.02 or 0.01
+    if math.random() <= shinyChance then
+        variant = "Shiny"
+    end
+    
+    -- Create the dragon
+    local dragon = DragonData.CreateDragon(element, rarity, 1, variant)
+    
+    return dragon, "Dragon hatched successfully!"
+end
+
+function EggData.RollRarity(rarityWeights, luckyBonus)
+    local roll = math.random()
+    
+    -- Lucky bonus shifts probabilities toward higher rarities
+    if luckyBonus then
+        roll = roll * 0.8 -- Bias toward better outcomes
+    end
+    
+    local cumulative = 0
+    for i, rarityData in ipairs(Config.Rarities) do
+        local weight = rarityWeights[rarityData.Name] or 0
+        cumulative = cumulative + weight
+        
+        if roll <= cumulative then
+            return rarityData.Name
         end
     end
     
-    return table.concat(odds, "\n")
+    -- Fallback
+    return "Common"
 end
 
--- Helper function to roll for dragon rarity based on egg tier
-function EggData:RollRarity(tierName)
-    local tier = self:GetTier(tierName)
-    if not tier then return "Common" end
-    
-    local weights = tier.RarityWeights
-    local totalWeight = 0
-    for _, weight in pairs(weights) do
-        totalWeight = totalWeight + weight
+--------------------------------------------------------------------------------
+-- Incubator System
+--------------------------------------------------------------------------------
+function EggData.CanPlaceInIncubator(egg, incubator)
+    if incubator.EggId then
+        return false, "Incubator already has an egg"
     end
     
-    local roll = math.random() * totalWeight
-    local currentWeight = 0
+    if egg.Position then
+        return false, "Egg is already in an incubator"
+    end
     
-    for rarity, weight in pairs(weights) do
-        currentWeight = currentWeight + weight
-        if roll <= currentWeight then
-            return rarity
+    return true, "Can place egg"
+end
+
+function EggData.PlaceEggInIncubator(egg, incubator)
+    local canPlace, reason = EggData.CanPlaceInIncubator(egg, incubator)
+    if not canPlace then
+        return false, reason
+    end
+    
+    incubator.EggId = egg.UniqueId
+    egg.Position = incubator.Position
+    
+    -- Start hatching automatically
+    EggData.StartHatching(egg)
+    
+    return true, "Egg placed in incubator"
+end
+
+function EggData.RemoveEggFromIncubator(egg, incubator)
+    if incubator.EggId ~= egg.UniqueId then
+        return false, "Egg is not in this incubator"
+    end
+    
+    incubator.EggId = nil
+    egg.Position = nil
+    
+    return true, "Egg removed from incubator"
+end
+
+--------------------------------------------------------------------------------
+-- Visual Effects Data
+--------------------------------------------------------------------------------
+EggData.HatchEffects = {
+    Common = {
+        ParticleColor = Color3.new(0.8, 0.8, 0.8),
+        ShakeIntensity = 1,
+        SoundEffect = "rbxassetid://1234567890", -- Placeholder
+        CameraEffect = false
+    },
+    
+    Uncommon = {
+        ParticleColor = Color3.new(0.2, 1, 0.2),
+        ShakeIntensity = 2,
+        SoundEffect = "rbxassetid://1234567891", 
+        CameraEffect = false
+    },
+    
+    Rare = {
+        ParticleColor = Color3.new(0.2, 0.5, 1),
+        ShakeIntensity = 3,
+        SoundEffect = "rbxassetid://1234567892",
+        CameraEffect = false
+    },
+    
+    Epic = {
+        ParticleColor = Color3.new(0.7, 0.2, 1), 
+        ShakeIntensity = 4,
+        SoundEffect = "rbxassetid://1234567893",
+        CameraEffect = true
+    },
+    
+    Legendary = {
+        ParticleColor = Color3.new(1, 0.8, 0.2),
+        ShakeIntensity = 6,
+        SoundEffect = "rbxassetid://1234567894",
+        CameraEffect = true,
+        ScreenShake = true
+    },
+    
+    Mythic = {
+        ParticleColor = Color3.new(1, 0.2, 0.2),
+        ShakeIntensity = 8,
+        SoundEffect = "rbxassetid://1234567895", 
+        CameraEffect = true,
+        ScreenShake = true,
+        Confetti = true
+    },
+    
+    Huge = {
+        ParticleColor = Color3.new(1, 1, 1),
+        ShakeIntensity = 10,
+        SoundEffect = "rbxassetid://1234567896",
+        CameraEffect = true,
+        ScreenShake = true,
+        Confetti = true,
+        ServerAnnouncement = true
+    }
+}
+
+--------------------------------------------------------------------------------
+-- Helpers
+--------------------------------------------------------------------------------
+function EggData.GetEggDisplayInfo(egg)
+    local template = EggData.EggTypes[egg.Type]
+    local progress = EggData.GetHatchProgress(egg)
+    local timeRemaining = math.max(0, egg.HatchTime - (tick() - egg.StartTime))
+    
+    return {
+        Type = egg.Type,
+        Progress = progress,
+        TimeRemaining = timeRemaining,
+        IsReady = EggData.IsReadyToHatch(egg),
+        VisualState = progress < 0.25 and "Whole" or
+                     progress < 0.5 and "Cracking1" or  
+                     progress < 0.75 and "Cracking2" or
+                     progress < 1.0 and "AboutToHatch" or "ReadyToHatch"
+    }
+end
+
+function EggData.GetEggPrice(eggType, currency)
+    local template = EggData.EggTypes[eggType]
+    if not template then return nil end
+    
+    if template.Currency == currency then
+        return template.Price
+    end
+    
+    return nil
+end
+
+function EggData.IsEggAvailableInArea(eggType, areaName)
+    local template = EggData.EggTypes[eggType]
+    if not template then return false end
+    
+    for _, availableArea in ipairs(template.AvailableIn) do
+        if availableArea == areaName then
+            return true
         end
     end
     
-    return "Common" -- Fallback
-end
-
--- Helper function to format hatch time for display
-function EggData:FormatHatchTime(seconds)
-    if seconds < 60 then
-        return string.format("%ds", seconds)
-    elseif seconds < 3600 then
-        return string.format("%dm", math.floor(seconds / 60))
-    else
-        local hours = math.floor(seconds / 3600)
-        local minutes = math.floor((seconds % 3600) / 60)
-        if minutes > 0 then
-            return string.format("%dh %dm", hours, minutes)
-        else
-            return string.format("%dh", hours)
-        end
-    end
+    return false
 end
 
 return EggData

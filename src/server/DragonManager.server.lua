@@ -1,378 +1,527 @@
--- DragonManager.server.lua - Dragon management system
+--[[
+    DragonManager.server.lua
+    Dragon system management for V3 - hatching, growth, feeding, breeding
+]]
+
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local InsertService = game:GetService("InsertService")
-local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
-local Utils = require(ReplicatedStorage.Shared.Utils)
 local DragonData = require(ReplicatedStorage.Shared.DragonData)
+local EggData = require(ReplicatedStorage.Shared.EggData)
 local AssetIds = require(ReplicatedStorage.Shared.AssetIds)
+local DataStore = require(script.Parent.DataStore)
 
--- Wait for DataStore API to be ready
-repeat wait() until _G.PlayerDataAPI
-local DataAPI = _G.PlayerDataAPI
+local DragonManager = {}
+DragonManager.ActiveDragons = {} -- Player -> {DragonId -> DragonModel}
+DragonManager.BreedingPairs = {} -- {Dragon1, Dragon2, StartTime, CompletionTime}
+DragonManager.ExpeditionDragons = {} -- {Dragon, StartTime, Duration, Type}
 
--- Track dragon models in the world
-local dragonModels = {} -- [playerId] = {[dragonId] = model}
+-- Remote events
+local RemoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
+local DragonHatchedEvent = RemoteEvents:FindFirstChild("DragonHatched") or Instance.new("RemoteEvent")
+DragonHatchedEvent.Name = "DragonHatched"
+DragonHatchedEvent.Parent = RemoteEvents
 
--- Create dragon model with fallback
-local function createDragonModel(dragon, position)
-    local element = dragon.Element
-    local growthStage = Utils.GetGrowthStage(dragon.Level)
-    local assetId
+local DragonFedEvent = RemoteEvents:FindFirstChild("DragonFed") or Instance.new("RemoteEvent") 
+DragonFedEvent.Name = "DragonFed"
+DragonFedEvent.Parent = RemoteEvents
+
+local DragonGrownEvent = RemoteEvents:FindFirstChild("DragonGrown") or Instance.new("RemoteEvent")
+DragonGrownEvent.Name = "DragonGrown"
+DragonGrownEvent.Parent = RemoteEvents
+
+local BreedingStartedEvent = RemoteEvents:FindFirstChild("BreedingStarted") or Instance.new("RemoteEvent")
+BreedingStartedEvent.Name = "BreedingStarted" 
+BreedingStartedEvent.Parent = RemoteEvents
+
+-- Dragon model creation
+function DragonManager.CreateDragonModel(dragon, parent)
+    local assetId = AssetIds.GetDragonAsset(dragon.Element, Config.GrowthStages[dragon.Stage].Name)
     
-    -- Determine which model to use based on growth stage
-    if AssetIds.Dragons[element] then
-        if growthStage == "Baby" or growthStage == "Juvenile" then
-            assetId = AssetIds.Dragons[element].Baby
-        else
-            assetId = AssetIds.Dragons[element].Adult
-        end
+    local model = Instance.new("Model")
+    model.Name = DragonData.GetDisplayName(dragon)
+    model.Parent = parent or workspace
+    
+    -- Create placeholder until asset loads
+    local placeholder = Instance.new("Part")
+    placeholder.Name = "Placeholder"
+    placeholder.Size = Vector3.new(dragon.Size, dragon.Size * 0.8, dragon.Size)
+    placeholder.Material = Enum.Material.Neon
+    placeholder.Color = Config.ElementColors[dragon.Element]
+    placeholder.Anchored = true
+    placeholder.CanCollide = false
+    placeholder.TopSurface = Enum.SurfaceType.Smooth
+    placeholder.BottomSurface = Enum.SurfaceType.Smooth
+    placeholder.Parent = model
+    
+    -- Add glow effect for variants
+    if dragon.Variant == "Shiny" then
+        local shinyEffect = Instance.new("PointLight")
+        shinyEffect.Color = Color3.new(1, 1, 1)
+        shinyEffect.Brightness = 2
+        shinyEffect.Range = 10
+        shinyEffect.Parent = placeholder
+    elseif dragon.Variant == "Golden" then
+        placeholder.Color = Color3.new(1, 0.8, 0.2)
+        local goldenEffect = Instance.new("PointLight")
+        goldenEffect.Color = Color3.new(1, 0.8, 0.2)
+        goldenEffect.Brightness = 1.5
+        goldenEffect.Range = 8
+        goldenEffect.Parent = placeholder
+    elseif dragon.Variant == "Rainbow" then
+        local rainbowEffect = Instance.new("PointLight")
+        rainbowEffect.Color = Color3.new(1, 0.5, 1)
+        rainbowEffect.Brightness = 3
+        rainbowEffect.Range = 15
+        rainbowEffect.Parent = placeholder
+        
+        -- Color cycling
+        spawn(function()
+            local hue = 0
+            while placeholder.Parent do
+                hue = (hue + 0.01) % 1
+                placeholder.Color = Color3.fromHSV(hue, 1, 1)
+                rainbowEffect.Color = Color3.fromHSV(hue, 0.8, 1)
+                wait(0.1)
+            end
+        end)
     end
     
-    local dragonModel
-    
-    -- Try to load from catalog first
-    if assetId and assetId > 0 then
-        local success, model = pcall(function()
-            return InsertService:LoadAsset(assetId)
+    -- Load actual mesh asynchronously
+    spawn(function()
+        local success, meshModel = pcall(function()
+            return game:GetService("InsertService"):LoadAsset(assetId)
         end)
         
-        if success and model then
-            dragonModel = model:GetChildren()[1]:Clone()
-            model:Destroy()
-        end
-    end
-    
-    -- Fallback to primitive dragon
-    if not dragonModel then
-        dragonModel = Instance.new("Model")
-        dragonModel.Name = dragon.Name
-        
-        -- Body
-        local body = Instance.new("Part")
-        body.Name = "Body"
-        body.Size = Vector3.new(3, 2, 6)
-        body.Shape = Enum.PartType.Block
-        body.CanCollide = false
-        body.Anchored = true
-        body.Parent = dragonModel
-        
-        -- Head
-        local head = Instance.new("Part")
-        head.Name = "Head"
-        head.Size = Vector3.new(2, 2, 2)
-        head.Shape = Enum.PartType.Ball
-        head.CanCollide = false
-        head.Anchored = true
-        head.Parent = dragonModel
-        
-        -- Wings
-        local leftWing = Instance.new("Part")
-        leftWing.Name = "LeftWing"
-        leftWing.Size = Vector3.new(0.5, 4, 2)
-        leftWing.CanCollide = false
-        leftWing.Anchored = true
-        leftWing.Parent = dragonModel
-        
-        local rightWing = Instance.new("Part")
-        rightWing.Name = "RightWing"
-        rightWing.Size = Vector3.new(0.5, 4, 2)
-        rightWing.CanCollide = false
-        rightWing.Anchored = true
-        rightWing.Parent = dragonModel
-        
-        -- Tail
-        local tail = Instance.new("Part")
-        tail.Name = "Tail"
-        tail.Size = Vector3.new(1, 1, 4)
-        tail.Shape = Enum.PartType.Cylinder
-        tail.CanCollide = false
-        tail.Anchored = true
-        tail.Parent = dragonModel
-        
-        -- Position parts relative to body
-        local bodyPosition = position
-        body.Position = bodyPosition
-        head.Position = bodyPosition + Vector3.new(0, 0, -4)
-        leftWing.Position = bodyPosition + Vector3.new(-2.5, 1, 0)
-        rightWing.Position = bodyPosition + Vector3.new(2.5, 1, 0)
-        tail.Position = bodyPosition + Vector3.new(0, 0, 5)
-        
-        -- Rotate tail
-        tail.CFrame = tail.CFrame * CFrame.Angles(0, 0, math.rad(90))
-    end
-    
-    -- Set dragon properties
-    local dragonInfo = DragonData:GetDragon(dragon.Element, dragon.Rarity)
-    if dragonInfo then
-        -- Color all parts based on element
-        local color = dragonInfo.Color
-        for _, part in pairs(dragonModel:GetChildren()) do
-            if part:IsA("Part") then
-                part.Color = color
-            end
-        end
-    end
-    
-    -- Scale based on growth stage
-    local scale = 0.5 -- Start small for babies
-    if growthStage == "Juvenile" then
-        scale = 0.7
-    elseif growthStage == "Teen" then
-        scale = 0.85
-    elseif growthStage == "Adult" then
-        scale = 1.0
-    elseif growthStage == "Elder" then
-        scale = 1.2
-    elseif growthStage == "Legendary" then
-        scale = 1.5
-    end
-    
-    -- Apply scaling
-    for _, part in pairs(dragonModel:GetChildren()) do
-        if part:IsA("Part") then
-            part.Size = part.Size * scale
-        end
-    end
-    
-    -- Add name billboard
-    local billboardGui = Instance.new("BillboardGui")
-    billboardGui.Size = UDim2.new(0, 100, 0, 50)
-    billboardGui.StudsOffset = Vector3.new(0, 3, 0)
-    billboardGui.Parent = dragonModel:FindFirstChild("Body") or dragonModel:FindFirstChildOfClass("Part")
-    
-    local nameLabel = Instance.new("TextLabel")
-    nameLabel.Size = UDim2.new(1, 0, 0.6, 0)
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.Text = dragon.Nickname or dragon.Name
-    nameLabel.TextColor3 = Color3.new(1, 1, 1)
-    nameLabel.TextScaled = true
-    nameLabel.Font = Enum.Font.SourceSansBold
-    nameLabel.Parent = billboardGui
-    
-    local levelLabel = Instance.new("TextLabel")
-    levelLabel.Size = UDim2.new(1, 0, 0.4, 0)
-    levelLabel.Position = UDim2.new(0, 0, 0.6, 0)
-    levelLabel.BackgroundTransparency = 1
-    levelLabel.Text = "Level " .. dragon.Level .. " " .. growthStage
-    levelLabel.TextColor3 = dragonInfo and dragonInfo.RarityColor or Color3.new(0.7, 0.7, 0.7)
-    levelLabel.TextScaled = true
-    levelLabel.Font = Enum.Font.SourceSans
-    levelLabel.Parent = billboardGui
-    
-    -- Add particle effects based on element
-    local attachment = Instance.new("Attachment")
-    attachment.Parent = dragonModel:FindFirstChild("Body") or dragonModel:FindFirstChildOfClass("Part")
-    
-    local particles = Instance.new("ParticleEmitter")
-    particles.Parent = attachment
-    particles.Lifetime = NumberRange.new(2.0, 4.0)
-    particles.Rate = 5
-    particles.SpreadAngle = Vector2.new(30, 30)
-    particles.Speed = NumberRange.new(1, 3)
-    
-    -- Element-specific particle effects
-    if dragon.Element == "Fire" then
-        particles.Texture = "rbxasset://textures/particles/fire_main.dds"
-        particles.Color = ColorSequence.new(Color3.new(1, 0.4, 0.1))
-    elseif dragon.Element == "Ice" then
-        particles.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-        particles.Color = ColorSequence.new(Color3.new(0.5, 0.8, 1))
-    elseif dragon.Element == "Nature" then
-        particles.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-        particles.Color = ColorSequence.new(Color3.new(0.2, 0.8, 0.3))
-    elseif dragon.Element == "Shadow" then
-        particles.Texture = "rbxasset://textures/particles/smoke_main.dds"
-        particles.Color = ColorSequence.new(Color3.new(0.3, 0.2, 0.5))
-    elseif dragon.Element == "Light" then
-        particles.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-        particles.Color = ColorSequence.new(Color3.new(1, 1, 0.7))
-    elseif dragon.Element == "Storm" then
-        particles.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-        particles.Color = ColorSequence.new(Color3.new(0.6, 0.4, 1))
-    end
-    
-    -- Position and parent
-    dragonModel:SetPrimaryPartCFrame(CFrame.new(position))
-    dragonModel.Parent = Workspace
-    
-    return dragonModel
-end
-
--- Feed dragon function
-local function feedDragon(player, dragonId)
-    local data = DataAPI.GetData(player)
-    if not data then return false end
-    
-    local dragon = data.Dragons[dragonId]
-    if not dragon then return false end
-    
-    -- Check if player can afford feeding
-    if data.Coins < Config.Dragons.FeedingCost then
-        return false, "Need " .. Config.Dragons.FeedingCost .. " coins to feed!"
-    end
-    
-    -- Spend coins
-    local success = DataAPI.SpendCurrency(player, Config.Dragons.FeedingCost, 0)
-    if not success then return false, "Failed to spend coins" end
-    
-    -- Add XP to dragon
-    dragon.XP = dragon.XP + Config.Dragons.FeedingXP
-    
-    -- Check for level up
-    local requiredXP = Config.Dragons.XPRequired[dragon.Level] or Config.Dragons.XPRequired[#Config.Dragons.XPRequired]
-    
-    if dragon.XP >= requiredXP and dragon.Level < Config.Dragons.MaxLevel then
-        dragon.Level = dragon.Level + 1
-        dragon.XP = 0 -- Reset XP for next level
-        
-        -- Recalculate stats
-        local dragonInfo = DragonData:GetDragon(dragon.Element, dragon.Rarity)
-        if dragonInfo then
-            dragon.Stats = Utils.CalculateStats(dragonInfo.BaseStats, dragon.Level)
-            dragon.GrowthStage = Utils.GetGrowthStage(dragon.Level)
-        end
-        
-        -- Update dragon model if it exists
-        local playerDragons = dragonModels[player.UserId]
-        if playerDragons and playerDragons[dragonId] then
-            local model = playerDragons[dragonId]
-            -- Update billboard with new level and growth stage
-            local billboard = model:FindFirstChild("BillboardGui", true)
-            if billboard then
-                local levelLabel = billboard:FindFirstChild("TextLabel")
-                if levelLabel and levelLabel.Name ~= "TextLabel" then -- Get the second label
-                    levelLabel.Text = "Level " .. dragon.Level .. " " .. dragon.GrowthStage
+        if success and meshModel then
+            local mesh = meshModel:GetChildren()[1]
+            if mesh and mesh:IsA("Model") then
+                mesh.Parent = model
+                mesh.Name = "DragonMesh"
+                
+                -- Scale mesh to match dragon size
+                DragonManager.ScaleModel(mesh, dragon.Size / 3) -- Base size is 3
+                
+                -- Position mesh
+                if mesh.PrimaryPart then
+                    mesh:SetPrimaryPartCFrame(placeholder.CFrame)
                 end
+                
+                placeholder:Destroy()
             end
+            meshModel:Destroy()
+        else
+            warn("Failed to load dragon mesh:", assetId)
         end
-        
-        print(player.Name .. "'s " .. dragon.Name .. " leveled up to " .. dragon.Level .. "!")
-    end
+    end)
     
-    return true, "Fed " .. dragon.Name .. "! +" .. Config.Dragons.FeedingXP .. " XP"
-end
-
--- Set active companion dragon
-local function setActiveCompanion(player, dragonId)
-    local data = DataAPI.GetData(player)
-    if not data then return false end
+    -- Add click detection
+    local clickDetector = Instance.new("ClickDetector")
+    clickDetector.MaxActivationDistance = 20
+    clickDetector.Parent = placeholder
     
-    -- Validate dragon exists
-    if dragonId and not data.Dragons[dragonId] then
-        return false, "Dragon not found"
-    end
+    clickDetector.MouseClick:Connect(function(player)
+        DragonManager.OnDragonClicked(player, dragon)
+    end)
     
-    -- Set new active companion
-    data.ActiveCompanion = dragonId
+    -- Add idle behaviors
+    DragonManager.StartIdleBehavior(model, dragon)
     
-    return true, dragonId and "Companion set!" or "Companion dismissed"
+    return model
 end
 
--- Create remote functions
-local feedDragonFunction = ReplicatedStorage.RemoteFunctions:FindFirstChild("FeedDragon")
-if not feedDragonFunction then
-    feedDragonFunction = Instance.new("RemoteFunction")
-    feedDragonFunction.Name = "FeedDragon"
-    feedDragonFunction.Parent = ReplicatedStorage.RemoteFunctions
-end
-
-feedDragonFunction.OnServerInvoke = function(player, dragonId)
-    local success, message = feedDragon(player, dragonId)
-    return {success = success, message = message}
-end
-
-local setCompanionFunction = ReplicatedStorage.RemoteFunctions:FindFirstChild("SetActiveCompanion")
-if not setCompanionFunction then
-    setCompanionFunction = Instance.new("RemoteFunction")
-    setCompanionFunction.Name = "SetActiveCompanion"
-    setCompanionFunction.Parent = ReplicatedStorage.RemoteFunctions
-end
-
-setCompanionFunction.OnServerInvoke = function(player, dragonId)
-    local success, message = setActiveCompanion(player, dragonId)
-    return {success = success, message = message}
-end
-
--- Get dragon inventory
-local getDragonsFunction = ReplicatedStorage.RemoteFunctions:FindFirstChild("GetDragons")
-if not getDragonsFunction then
-    getDragonsFunction = Instance.new("RemoteFunction")
-    getDragonsFunction.Name = "GetDragons"
-    getDragonsFunction.Parent = ReplicatedStorage.RemoteFunctions
-end
-
-getDragonsFunction.OnServerInvoke = function(player)
-    local data = DataAPI.GetData(player)
-    if not data then return {} end
-    
-    local dragons = {}
-    for dragonId, dragon in pairs(data.Dragons) do
-        -- Add calculated current stats
-        local dragonInfo = DragonData:GetDragon(dragon.Element, dragon.Rarity)
-        local stats = dragon.Stats
-        
-        if dragonInfo then
-            stats = Utils.CalculateStats(dragonInfo.BaseStats, dragon.Level)
+-- Scale model recursively
+function DragonManager.ScaleModel(model, scale)
+    for _, child in ipairs(model:GetDescendants()) do
+        if child:IsA("BasePart") then
+            child.Size = child.Size * scale
+            child.CFrame = model.PrimaryPart.CFrame * (model.PrimaryPart.CFrame:Inverse() * child.CFrame * scale)
         end
-        
-        local dragonCopy = Utils.DeepCopy(dragon)
-        dragonCopy.CurrentStats = stats
-        dragonCopy.IsActive = (data.ActiveCompanion == dragonId)
-        dragons[dragonId] = dragonCopy
     end
-    
-    return dragons
 end
 
--- Player management
-Players.PlayerAdded:Connect(function(player)
-    dragonModels[player.UserId] = {}
-    
-    player.CharacterAdded:Connect(function(character)
-        wait(3) -- Let character load
-        
-        -- Spawn dragons on player's plot (simplified positioning)
-        local data = DataAPI.GetData(player)
-        if data and data.PlotId then
-            local dragonCount = 0
+-- Dragon idle behaviors
+function DragonManager.StartIdleBehavior(model, dragon)
+    spawn(function()
+        while model.Parent do
+            local behavior = math.random(1, 4)
             
-            for dragonId, dragon in pairs(data.Dragons) do
-                -- Calculate dragon position on plot
-                local plotAngle = (data.PlotId - 1) * (360 / Config.Game.PlotCount)
-                local plotX = math.cos(math.rad(plotAngle)) * Config.Game.PlotRadius
-                local plotZ = math.sin(math.rad(plotAngle)) * Config.Game.PlotRadius
-                
-                -- Arrange dragons in a line on the plot
-                local dragonPosition = Vector3.new(
-                    plotX + (dragonCount * 5),
-                    2,
-                    plotZ + 10
-                )
-                
-                local dragonModel = createDragonModel(dragon, dragonPosition)
-                dragonModels[player.UserId][dragonId] = dragonModel
-                
-                dragonCount = dragonCount + 1
+            if behavior == 1 then
+                -- Sleep animation
+                DragonManager.AnimateSleep(model)
+                wait(math.random(5, 15))
+            elseif behavior == 2 then
+                -- Play animation  
+                DragonManager.AnimatePlay(model)
+                wait(math.random(3, 8))
+            elseif behavior == 3 then
+                -- Fly around
+                DragonManager.AnimateFly(model, dragon)
+                wait(math.random(8, 20))
+            else
+                -- Just wait
+                wait(math.random(10, 30))
             end
         end
     end)
-end)
+end
 
--- Clean up when player leaves
-Players.PlayerRemoving:Connect(function(player)
-    local playerDragons = dragonModels[player.UserId]
-    if playerDragons then
-        for dragonId, model in pairs(playerDragons) do
-            if model and model.Parent then
+-- Animation functions
+function DragonManager.AnimateSleep(model)
+    local primaryPart = model.PrimaryPart or model:FindFirstChild("Placeholder")
+    if not primaryPart then return end
+    
+    local originalCFrame = primaryPart.CFrame
+    local sleepCFrame = originalCFrame * CFrame.Angles(math.rad(15), 0, 0)
+    
+    local tween = TweenService:Create(primaryPart, TweenInfo.new(2, Enum.EasingStyle.Quad), {
+        CFrame = sleepCFrame
+    })
+    tween:Play()
+    
+    -- Return to normal after a while
+    spawn(function()
+        wait(math.random(3, 8))
+        if primaryPart.Parent then
+            local returnTween = TweenService:Create(primaryPart, TweenInfo.new(1, Enum.EasingStyle.Quad), {
+                CFrame = originalCFrame
+            })
+            returnTween:Play()
+        end
+    end)
+end
+
+function DragonManager.AnimatePlay(model)
+    local primaryPart = model.PrimaryPart or model:FindFirstChild("Placeholder")
+    if not primaryPart then return end
+    
+    local originalPos = primaryPart.Position
+    
+    for i = 1, 3 do
+        local jumpHeight = math.random(3, 8)
+        local tween = TweenService:Create(primaryPart, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
+            Position = originalPos + Vector3.new(0, jumpHeight, 0)
+        })
+        tween:Play()
+        tween.Completed:Wait()
+        
+        local fallTween = TweenService:Create(primaryPart, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
+            Position = originalPos
+        })
+        fallTween:Play()
+        fallTween.Completed:Wait()
+        
+        wait(0.2)
+    end
+end
+
+function DragonManager.AnimateFly(model, dragon)
+    local primaryPart = model.PrimaryPart or model:FindFirstChild("Placeholder")
+    if not primaryPart then return end
+    
+    -- Only adult+ dragons can fly
+    if dragon.Stage < 4 then return end
+    
+    local originalPos = primaryPart.Position
+    local flyHeight = originalPos.Y + math.random(10, 20)
+    local distance = math.random(15, 30)
+    local angle = math.random() * math.pi * 2
+    
+    local flyPos = Vector3.new(
+        originalPos.X + math.cos(angle) * distance,
+        flyHeight,
+        originalPos.Z + math.sin(angle) * distance
+    )
+    
+    -- Fly up
+    local upTween = TweenService:Create(primaryPart, TweenInfo.new(2, Enum.EasingStyle.Quad), {
+        Position = Vector3.new(originalPos.X, flyHeight, originalPos.Z)
+    })
+    upTween:Play()
+    upTween.Completed:Wait()
+    
+    -- Fly to position
+    local flyTween = TweenService:Create(primaryPart, TweenInfo.new(3, Enum.EasingStyle.Linear), {
+        Position = flyPos
+    })
+    flyTween:Play()
+    flyTween.Completed:Wait()
+    
+    wait(math.random(2, 5))
+    
+    -- Fly back
+    local returnTween = TweenService:Create(primaryPart, TweenInfo.new(3, Enum.EasingStyle.Quad), {
+        Position = originalPos
+    })
+    returnTween:Play()
+end
+
+-- Dragon interaction
+function DragonManager.OnDragonClicked(player, dragon)
+    local playerData = DataStore.GetPlayerData(player)
+    if not playerData then return end
+    
+    -- Find this dragon in player's collection
+    local dragonIndex = nil
+    for i, playerDragon in ipairs(playerData.Dragons) do
+        if playerDragon.UniqueId == dragon.UniqueId then
+            dragonIndex = i
+            break
+        end
+    end
+    
+    if not dragonIndex then return end
+    
+    -- Check if dragon can be fed
+    local success, message = DragonData.FeedDragon(playerData.Dragons[dragonIndex])
+    
+    if success then
+        -- Award coins for feeding
+        DataStore.AddCoins(player, 10)
+        
+        -- Check if dragon grew
+        if DragonData.CanGrowToNextStage(playerData.Dragons[dragonIndex]) then
+            local grownDragon = DragonData.GrowDragon(playerData.Dragons[dragonIndex])
+            if grownDragon then
+                playerData.Dragons[dragonIndex] = grownDragon
+                DataStore.MarkDataDirty(player)
+                
+                -- Update visual model
+                DragonManager.UpdateDragonModel(player, grownDragon)
+                
+                -- Notify client
+                DragonGrownEvent:FireClient(player, grownDragon)
+                
+                print(player.Name .. "'s dragon grew to " .. Config.GrowthStages[grownDragon.Stage].Name)
+            end
+        end
+        
+        DataStore.MarkDataDirty(player)
+        DragonFedEvent:FireClient(player, message)
+    else
+        DragonFedEvent:FireClient(player, message)
+    end
+end
+
+-- Update dragon model when it grows
+function DragonManager.UpdateDragonModel(player, dragon)
+    local playerDragons = DragonManager.ActiveDragons[player]
+    if not playerDragons then return end
+    
+    local existingModel = playerDragons[dragon.UniqueId]
+    if existingModel then
+        existingModel:Destroy()
+    end
+    
+    -- Create new model with updated size
+    local newModel = DragonManager.CreateDragonModel(dragon)
+    playerDragons[dragon.UniqueId] = newModel
+end
+
+-- Egg hatching
+function DragonManager.HatchEgg(player, eggId, luckyBonus)
+    local playerData = DataStore.GetPlayerData(player)
+    if not playerData then return end
+    
+    -- Find egg in incubators
+    local egg = nil
+    local eggIndex = nil
+    for i, incubatorEgg in ipairs(playerData.EggsInIncubators) do
+        if incubatorEgg.UniqueId == eggId then
+            egg = incubatorEgg
+            eggIndex = i
+            break
+        end
+    end
+    
+    if not egg or not EggData.IsReadyToHatch(egg) then
+        return false, "Egg is not ready to hatch"
+    end
+    
+    -- Hatch the egg
+    local dragon, message = EggData.HatchEgg(egg, luckyBonus)
+    if not dragon then
+        return false, message
+    end
+    
+    -- Add to player's collection
+    table.insert(playerData.Dragons, dragon)
+    table.remove(playerData.EggsInIncubators, eggIndex)
+    
+    -- Update stats
+    playerData.Stats.DragonsHatched = playerData.Stats.DragonsHatched + 1
+    
+    -- Update rarest dragon
+    local rarityIndex = 1
+    for i, rarityData in ipairs(Config.Rarities) do
+        if rarityData.Name == dragon.Rarity then
+            rarityIndex = i
+            break
+        end
+    end
+    
+    local currentRarestIndex = 1
+    for i, rarityData in ipairs(Config.Rarities) do
+        if rarityData.Name == playerData.Stats.RarestDragon then
+            currentRarestIndex = i
+            break
+        end
+    end
+    
+    if rarityIndex > currentRarestIndex then
+        playerData.Stats.RarestDragon = dragon.Rarity
+    end
+    
+    DataStore.MarkDataDirty(player)
+    
+    -- Create dragon model in world
+    local dragonModel = DragonManager.CreateDragonModel(dragon)
+    if not DragonManager.ActiveDragons[player] then
+        DragonManager.ActiveDragons[player] = {}
+    end
+    DragonManager.ActiveDragons[player][dragon.UniqueId] = dragonModel
+    
+    -- Notify client with effects
+    DragonHatchedEvent:FireClient(player, dragon)
+    
+    -- Server announcement for rare dragons
+    if dragon.Rarity == "Mythic" or dragon.Rarity == "Huge" then
+        local announcement = string.format("🐉 %s just hatched a %s %s Dragon!", 
+            player.Name, dragon.Rarity, dragon.Element)
+        
+        for _, otherPlayer in ipairs(Players:GetPlayers()) do
+            -- Send to all players (you'd implement a proper announcement system)
+            print(announcement) -- Placeholder
+        end
+    end
+    
+    print(player.Name .. " hatched a " .. DragonData.GetDisplayName(dragon))
+    return true, "Dragon hatched successfully!"
+end
+
+-- Breeding system
+function DragonManager.StartBreeding(player, dragon1Id, dragon2Id)
+    local playerData = DataStore.GetPlayerData(player)
+    if not playerData then return false, "Player data not found" end
+    
+    -- Find dragons
+    local dragon1, dragon2 = nil, nil
+    for _, dragon in ipairs(playerData.Dragons) do
+        if dragon.UniqueId == dragon1Id then
+            dragon1 = dragon
+        elseif dragon.UniqueId == dragon2Id then
+            dragon2 = dragon
+        end
+    end
+    
+    if not dragon1 or not dragon2 then
+        return false, "Dragons not found"
+    end
+    
+    -- Check if breeding is allowed
+    local canBreed, reason = DragonData.CanBreed(dragon1, dragon2)
+    if not canBreed then
+        return false, reason
+    end
+    
+    -- Check breeding altar
+    if not playerData.Plot.HasBreedingAltar then
+        return false, "Breeding altar required"
+    end
+    
+    -- Start breeding process
+    local breedingData = {
+        Player = player,
+        Dragon1 = dragon1,
+        Dragon2 = dragon2,
+        StartTime = tick(),
+        CompletionTime = tick() + (4 * 60 * 60) -- 4 hours
+    }
+    
+    table.insert(DragonManager.BreedingPairs, breedingData)
+    
+    dragon1.IsBreeding = true
+    dragon2.IsBreeding = true
+    DataStore.MarkDataDirty(player)
+    
+    BreedingStartedEvent:FireClient(player, dragon1, dragon2, 4 * 60 * 60)
+    
+    return true, "Breeding started - 4 hours remaining"
+end
+
+-- Check breeding completion
+function DragonManager.CheckBreedingCompletion()
+    local currentTime = tick()
+    
+    for i = #DragonManager.BreedingPairs, 1, -1 do
+        local breeding = DragonManager.BreedingPairs[i]
+        
+        if currentTime >= breeding.CompletionTime then
+            -- Breeding complete
+            local baby, message = DragonData.BreedDragons(breeding.Dragon1, breeding.Dragon2)
+            
+            if baby then
+                local playerData = DataStore.GetPlayerData(breeding.Player)
+                if playerData then
+                    table.insert(playerData.Dragons, baby)
+                    playerData.Stats.DragonsBreed = playerData.Stats.DragonsBreed + 1
+                    DataStore.MarkDataDirty(breeding.Player)
+                    
+                    -- Create model
+                    if not DragonManager.ActiveDragons[breeding.Player] then
+                        DragonManager.ActiveDragons[breeding.Player] = {}
+                    end
+                    
+                    local babyModel = DragonManager.CreateDragonModel(baby)
+                    DragonManager.ActiveDragons[breeding.Player][baby.UniqueId] = babyModel
+                    
+                    -- Notify player
+                    DragonHatchedEvent:FireClient(breeding.Player, baby)
+                    print(breeding.Player.Name .. " bred a " .. DragonData.GetDisplayName(baby))
+                end
+            end
+            
+            -- Reset breeding status
+            breeding.Dragon1.IsBreeding = false
+            breeding.Dragon2.IsBreeding = false
+            
+            -- Remove from breeding list
+            table.remove(DragonManager.BreedingPairs, i)
+        end
+    end
+end
+
+-- Player cleanup
+function DragonManager.OnPlayerRemoving(player)
+    if DragonManager.ActiveDragons[player] then
+        for dragonId, model in pairs(DragonManager.ActiveDragons[player]) do
+            if model then
                 model:Destroy()
             end
         end
-        dragonModels[player.UserId] = nil
+        DragonManager.ActiveDragons[player] = nil
+    end
+    
+    -- Remove from breeding pairs
+    for i = #DragonManager.BreedingPairs, 1, -1 do
+        if DragonManager.BreedingPairs[i].Player == player then
+            table.remove(DragonManager.BreedingPairs, i)
+        end
+    end
+end
+
+-- Main update loop
+spawn(function()
+    while true do
+        wait(60) -- Check every minute
+        DragonManager.CheckBreedingCompletion()
     end
 end)
 
-print("DragonManager system loaded successfully!")
+-- Event connections
+Players.PlayerRemoving:Connect(DragonManager.OnPlayerRemoving)
+
+return DragonManager

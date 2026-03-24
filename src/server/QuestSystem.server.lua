@@ -1,146 +1,263 @@
--- QuestSystem.server.lua - Daily and weekly quest system
+--[[
+    QuestSystem.server.lua
+    Daily and weekly quest management for V3
+]]
+
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
-local Utils = require(ReplicatedStorage.Shared.Utils)
+local DataStore = require(script.Parent.DataStore)
 
--- Wait for DataStore API to be ready
-repeat wait() until _G.PlayerDataAPI
-local DataAPI = _G.PlayerDataAPI
+local QuestSystem = {}
+QuestSystem.ActiveQuests = {} -- Player -> {Daily = {}, Weekly = {}}
 
--- Generate new quests for a player
-local function generateDailyQuests(player)
-    local data = DataAPI.GetData(player)
-    if not data then return end
+-- Remote events
+local RemoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
+local QuestProgressEvent = RemoteEvents:FindFirstChild("QuestProgress") or Instance.new("RemoteEvent")
+QuestProgressEvent.Name = "QuestProgress"
+QuestProgressEvent.Parent = RemoteEvents
+
+local QuestCompletedEvent = RemoteEvents:FindFirstChild("QuestCompleted") or Instance.new("RemoteEvent")
+QuestCompletedEvent.Name = "QuestCompleted" 
+QuestCompletedEvent.Parent = RemoteEvents
+
+local DailyRewardClaimedEvent = RemoteEvents:FindFirstChild("DailyRewardClaimed") or Instance.new("RemoteEvent")
+DailyRewardClaimedEvent.Name = "DailyRewardClaimed"
+DailyRewardClaimedEvent.Parent = RemoteEvents
+
+-- Remote functions
+local RemoteFunctions = ReplicatedStorage:WaitForChild("RemoteFunctions")
+local ClaimQuestRewardFunction = RemoteFunctions:FindFirstChild("ClaimQuestReward") or Instance.new("RemoteFunction")
+ClaimQuestRewardFunction.Name = "ClaimQuestReward"
+ClaimQuestRewardFunction.Parent = RemoteFunctions
+
+local ClaimDailyRewardFunction = RemoteFunctions:FindFirstChild("ClaimDailyReward") or Instance.new("RemoteFunction")
+ClaimDailyRewardFunction.Name = "ClaimDailyReward"
+ClaimDailyRewardFunction.Parent = RemoteFunctions
+
+-- Quest templates
+local DailyQuestTemplates = {
+    {
+        ID = "hatch_eggs",
+        Description = "Hatch {target} eggs",
+        Type = "hatch",
+        BaseTarget = 3,
+        BaseReward = {Coins = 200, Essence = 10}
+    },
+    {
+        ID = "feed_dragons", 
+        Description = "Feed dragons {target} times",
+        Type = "feed",
+        BaseTarget = 15,
+        BaseReward = {Coins = 150, Essence = 8}
+    },
+    {
+        ID = "earn_coins",
+        Description = "Earn {target} coins",
+        Type = "coins",
+        BaseTarget = 1000,
+        BaseReward = {Coins = 300, Essence = 15}
+    },
+    {
+        ID = "send_expeditions",
+        Description = "Send dragons on {target} expeditions",
+        Type = "expedition",
+        BaseTarget = 3,
+        BaseReward = {Coins = 250, Essence = 12}
+    },
+    {
+        ID = "upgrade_building",
+        Description = "Upgrade a building",
+        Type = "upgrade", 
+        BaseTarget = 1,
+        BaseReward = {Coins = 500, Essence = 25}
+    },
+    {
+        ID = "visit_areas",
+        Description = "Visit {target} different areas",
+        Type = "visit",
+        BaseTarget = 2,
+        BaseReward = {Coins = 180, Essence = 9}
+    }
+}
+
+local WeeklyQuestTemplates = {
+    {
+        ID = "breed_fusion",
+        Description = "Breed a fusion dragon",
+        Type = "breed_fusion",
+        BaseTarget = 1,
+        BaseReward = {Coins = 2000, Essence = 100}
+    },
+    {
+        ID = "collect_rarity",
+        Description = "Hatch an Epic+ dragon",
+        Type = "hatch_rarity",
+        BaseTarget = 1,
+        RequiredRarity = "Epic",
+        BaseReward = {Coins = 1500, Essence = 75}
+    },
+    {
+        ID = "complete_dailies",
+        Description = "Complete {target} daily quests", 
+        Type = "complete_daily",
+        BaseTarget = 10,
+        BaseReward = {Coins = 3000, Essence = 150}
+    },
+    {
+        ID = "earn_weekly_coins",
+        Description = "Earn {target} coins this week",
+        Type = "coins_weekly",
+        BaseTarget = 25000,
+        BaseReward = {Coins = 5000, Essence = 200}
+    },
+    {
+        ID = "unlock_area",
+        Description = "Unlock a new area",
+        Type = "unlock_area",
+        BaseTarget = 1,
+        BaseReward = {Coins = 10000, Essence = 500}
+    }
+}
+
+-- Generate daily quests
+function QuestSystem.GenerateDailyQuests(player)
+    local playerData = DataStore.GetPlayerData(player)
+    if not playerData then return end
     
-    -- Clear existing daily quests
-    data.Quests.Daily = {}
+    -- Clear existing quests
+    playerData.Quests.Daily = {}
     
-    -- Generate new daily quests (pick 3 random quests)
-    local availableQuests = Utils.DeepCopy(Config.Quests.Daily)
-    local selectedQuests = {}
+    -- Shuffle templates
+    local availableTemplates = {}
+    for _, template in ipairs(DailyQuestTemplates) do
+        table.insert(availableTemplates, template)
+    end
     
+    -- Generate 3 daily quests
     for i = 1, 3 do
-        if #availableQuests > 0 then
-            local index = math.random(1, #availableQuests)
-            local quest = availableQuests[index]
+        if #availableTemplates > 0 then
+            local templateIndex = math.random(#availableTemplates)
+            local template = availableTemplates[templateIndex]
             
-            -- Create quest with unique ID and progress tracking
-            local questId = Utils.GenerateId()
-            selectedQuests[questId] = {
-                Id = questId,
-                Type = quest.Type,
-                Amount = quest.Amount,
-                Progress = 0,
-                Reward = quest.Reward,
-                Completed = false,
-                Claimed = false
-            }
+            -- Create quest from template
+            local quest = QuestSystem.CreateQuestFromTemplate(template, "Daily", i)
+            table.insert(playerData.Quests.Daily, quest)
             
-            -- Remove from available quests to avoid duplicates
-            table.remove(availableQuests, index)
+            -- Remove template to avoid duplicates
+            table.remove(availableTemplates, templateIndex)
         end
     end
     
-    data.Quests.Daily = selectedQuests
-    data.Quests.LastReset.Daily = Utils.GetTimestamp()
+    playerData.Quests.DailyResetTime = tick()
+    DataStore.MarkDataDirty(player)
     
-    print("Generated daily quests for " .. player.Name)
+    print("Generated daily quests for", player.Name)
 end
 
-local function generateWeeklyQuests(player)
-    local data = DataAPI.GetData(player)
-    if not data then return end
+-- Generate weekly quest
+function QuestSystem.GenerateWeeklyQuest(player)
+    local playerData = DataStore.GetPlayerData(player)
+    if not playerData then return end
     
-    -- Clear existing weekly quests
-    data.Quests.Weekly = {}
+    -- Pick random weekly quest template
+    local template = WeeklyQuestTemplates[math.random(#WeeklyQuestTemplates)]
+    local quest = QuestSystem.CreateQuestFromTemplate(template, "Weekly", 1)
     
-    -- Generate new weekly quests (pick 2 random quests)
-    local availableQuests = Utils.DeepCopy(Config.Quests.Weekly)
-    local selectedQuests = {}
+    playerData.Quests.Weekly = {quest}
+    playerData.Quests.WeeklyResetTime = tick()
+    DataStore.MarkDataDirty(player)
     
-    for i = 1, 2 do
-        if #availableQuests > 0 then
-            local index = math.random(1, #availableQuests)
-            local quest = availableQuests[index]
-            
-            -- Create quest with unique ID and progress tracking
-            local questId = Utils.GenerateId()
-            selectedQuests[questId] = {
-                Id = questId,
-                Type = quest.Type,
-                Amount = quest.Amount,
-                Progress = 0,
-                Reward = quest.Reward,
-                Completed = false,
-                Claimed = false
-            }
-            
-            -- Remove from available quests to avoid duplicates
-            table.remove(availableQuests, index)
-        end
-    end
+    print("Generated weekly quest for", player.Name)
+end
+
+-- Create quest from template
+function QuestSystem.CreateQuestFromTemplate(template, questType, difficulty)
+    local difficultyMultiplier = questType == "Daily" and difficulty or 1
+    local target = math.ceil(template.BaseTarget * difficultyMultiplier)
     
-    data.Quests.Weekly = selectedQuests
-    data.Quests.LastReset.Weekly = Utils.GetTimestamp()
+    local quest = {
+        ID = template.ID,
+        Type = template.Type,
+        Description = string.gsub(template.Description, "{target}", tostring(target)),
+        Target = target,
+        Progress = 0,
+        Completed = false,
+        Claimed = false,
+        RequiredRarity = template.RequiredRarity,
+        Reward = {
+            Coins = math.ceil(template.BaseReward.Coins * difficultyMultiplier),
+            Essence = math.ceil(template.BaseReward.Essence * difficultyMultiplier)
+        },
+        CreatedTime = tick()
+    }
     
-    print("Generated weekly quests for " .. player.Name)
+    return quest
 end
 
 -- Update quest progress
-local function updateQuestProgress(player, questType, amount)
-    local data = DataAPI.GetData(player)
-    if not data then return end
+function QuestSystem.UpdateQuestProgress(player, questType, progressType, amount, extraData)
+    local playerData = DataStore.GetPlayerData(player)
+    if not playerData then return end
     
     amount = amount or 1
-    local questsUpdated = {}
+    local questList = questType == "Daily" and playerData.Quests.Daily or playerData.Quests.Weekly
+    local updated = false
     
-    -- Update daily quests
-    for questId, quest in pairs(data.Quests.Daily) do
-        if quest.Type == questType and not quest.Completed then
-            quest.Progress = math.min(quest.Progress + amount, quest.Amount)
+    for _, quest in ipairs(questList) do
+        if not quest.Completed and quest.Type == progressType then
             
-            if quest.Progress >= quest.Amount then
-                quest.Completed = true
-                table.insert(questsUpdated, {Type = "Daily", Quest = quest})
+            -- Special handling for different quest types
+            local shouldUpdate = true
+            
+            if progressType == "hatch_rarity" and extraData then
+                -- Check if hatched dragon meets rarity requirement
+                local rarityIndex = 1
+                local requiredIndex = 1
+                
+                for i, rarity in ipairs(Config.Rarities) do
+                    if rarity.Name == extraData.rarity then rarityIndex = i end
+                    if rarity.Name == quest.RequiredRarity then requiredIndex = i end
+                end
+                
+                shouldUpdate = rarityIndex >= requiredIndex
+            elseif progressType == "breed_fusion" and extraData then
+                -- Check if bred dragon is a fusion
+                local isFusion = Config.FusionElements[extraData.element] ~= nil
+                shouldUpdate = isFusion
+            end
+            
+            if shouldUpdate then
+                quest.Progress = math.min(quest.Progress + amount, quest.Target)
+                updated = true
+                
+                -- Check for completion
+                if quest.Progress >= quest.Target and not quest.Completed then
+                    quest.Completed = true
+                    QuestCompletedEvent:FireClient(player, quest, questType)
+                    print(player.Name .. " completed " .. questType .. " quest: " .. quest.Description)
+                end
+                
+                -- Send progress update
+                QuestProgressEvent:FireClient(player, quest, questType)
             end
         end
     end
     
-    -- Update weekly quests
-    for questId, quest in pairs(data.Quests.Weekly) do
-        if quest.Type == questType and not quest.Completed then
-            quest.Progress = math.min(quest.Progress + amount, quest.Amount)
-            
-            if quest.Progress >= quest.Amount then
-                quest.Completed = true
-                table.insert(questsUpdated, {Type = "Weekly", Quest = quest})
-            end
-        end
-    end
-    
-    -- Notify client of quest completion
-    if #questsUpdated > 0 then
-        local questCompleted = ReplicatedStorage.RemoteEvents:FindFirstChild("QuestCompleted")
-        if questCompleted then
-            questCompleted:FireClient(player, questsUpdated)
-        end
+    if updated then
+        DataStore.MarkDataDirty(player)
     end
 end
 
 -- Claim quest reward
-local function claimQuestReward(player, questType, questId)
-    local data = DataAPI.GetData(player)
-    if not data then return false, "No player data" end
+function QuestSystem.ClaimQuestReward(player, questType, questIndex)
+    local playerData = DataStore.GetPlayerData(player)
+    if not playerData then return false, "Player data not found" end
     
-    local quest
-    if questType == "Daily" then
-        quest = data.Quests.Daily[questId]
-    elseif questType == "Weekly" then
-        quest = data.Quests.Weekly[questId]
-    end
+    local questList = questType == "Daily" and playerData.Quests.Daily or playerData.Quests.Weekly
+    local quest = questList[questIndex]
     
     if not quest then
         return false, "Quest not found"
@@ -155,183 +272,169 @@ local function claimQuestReward(player, questType, questId)
     end
     
     -- Give rewards
-    local coins = quest.Reward.Coins or 0
-    local gems = quest.Reward.Gems or 0
+    DataStore.AddCoins(player, quest.Reward.Coins)
+    DataStore.AddEssence(player, quest.Reward.Essence)
     
-    DataAPI.AddCurrency(player, coins, gems)
     quest.Claimed = true
+    DataStore.MarkDataDirty(player)
     
-    return true, "Claimed: " .. coins .. " coins" .. (gems > 0 and ", " .. gems .. " gems" or "")
-end
-
--- Get active quests for player
-local function getActiveQuests(player)
-    local data = DataAPI.GetData(player)
-    if not data then return {} end
+    print(player.Name .. " claimed " .. questType .. " quest reward: " .. quest.Reward.Coins .. " coins, " .. quest.Reward.Essence .. " essence")
     
-    local activeQuests = {
-        Daily = {},
-        Weekly = {}
-    }
-    
-    -- Get daily quests
-    for questId, quest in pairs(data.Quests.Daily) do
-        activeQuests.Daily[questId] = quest
+    -- Update weekly quest progress if this was a daily
+    if questType == "Daily" then
+        QuestSystem.UpdateQuestProgress(player, "Weekly", "complete_daily", 1)
     end
     
-    -- Get weekly quests
-    for questId, quest in pairs(data.Quests.Weekly) do
-        activeQuests.Weekly[questId] = quest
-    end
-    
-    return activeQuests
+    return true, "Reward claimed successfully"
 end
 
--- Check if quests need to be reset
-local function checkQuestResets(player)
-    local data = DataAPI.GetData(player)
-    if not data then return end
+-- Daily login reward system
+function QuestSystem.ClaimDailyReward(player)
+    local playerData = DataStore.GetPlayerData(player)
+    if not playerData then return false, "Player data not found" end
     
-    local currentTime = Utils.GetTimestamp()
-    local lastDailyReset = data.Quests.LastReset.Daily or 0
-    local lastWeeklyReset = data.Quests.LastReset.Weekly or 0
+    -- Check if daily reward can be claimed
+    local daysSinceLastReward = math.floor((tick() - playerData.LastDailyReward) / 86400)
+    if daysSinceLastReward < 1 then
+        return false, "Daily reward already claimed today"
+    end
     
-    -- Check daily reset (24 hours)
-    if currentTime - lastDailyReset >= 86400 then
-        generateDailyQuests(player)
+    -- Update streak
+    if daysSinceLastReward == 1 then
+        playerData.LoginStreak = math.min(playerData.LoginStreak + 1, 7)
+    else
+        playerData.LoginStreak = 1
+    end
+    
+    -- Get reward for current streak day
+    local rewardDay = playerData.LoginStreak
+    local reward = Config.DailyRewards[rewardDay]
+    
+    if not reward then
+        return false, "Invalid reward day"
+    end
+    
+    -- Give rewards
+    if reward.Coins > 0 then
+        DataStore.AddCoins(player, reward.Coins)
+    end
+    
+    if reward.Essence > 0 then
+        DataStore.AddEssence(player, reward.Essence)
+    end
+    
+    -- Give items
+    for _, item in ipairs(reward.Items) do
+        if item == "Rare Egg" then
+            local egg, _ = require(ReplicatedStorage.Shared.EggData).CreateEgg("Crystal Egg", player.UserId)
+            if egg then
+                table.insert(playerData.EggsInInventory, egg)
+            end
+        elseif item == "Epic Egg" then
+            local egg, _ = require(ReplicatedStorage.Shared.EggData).CreateEgg("Shadow Egg", player.UserId)
+            if egg then
+                table.insert(playerData.EggsInInventory, egg)
+            end
+        elseif item == "Legendary Egg" then
+            local egg, _ = require(ReplicatedStorage.Shared.EggData).CreateEgg("Golden Egg", player.UserId)
+            if egg then
+                table.insert(playerData.EggsInInventory, egg)
+            end
+        end
+    end
+    
+    playerData.LastDailyReward = tick()
+    DataStore.MarkDataDirty(player)
+    
+    DailyRewardClaimedEvent:FireClient(player, reward, rewardDay)
+    print(player.Name .. " claimed daily reward day " .. rewardDay)
+    
+    return true, "Daily reward claimed"
+end
+
+-- Check for quest resets
+function QuestSystem.CheckQuestResets(player)
+    local playerData = DataStore.GetPlayerData(player)
+    if not playerData then return end
+    
+    -- Check daily reset
+    local daysSinceDailyReset = math.floor((tick() - playerData.Quests.DailyResetTime) / 86400)
+    if daysSinceDailyReset >= 1 then
+        QuestSystem.GenerateDailyQuests(player)
     end
     
     -- Check weekly reset (7 days)
-    if currentTime - lastWeeklyReset >= 604800 then
-        generateWeeklyQuests(player)
+    local daysSinceWeeklyReset = math.floor((tick() - playerData.Quests.WeeklyResetTime) / (86400 * 7))
+    if daysSinceWeeklyReset >= 1 then
+        QuestSystem.GenerateWeeklyQuest(player)
     end
 end
 
--- Create remote functions
-local getQuestsFunction = ReplicatedStorage.RemoteFunctions:FindFirstChild("GetQuests")
-if not getQuestsFunction then
-    getQuestsFunction = Instance.new("RemoteFunction")
-    getQuestsFunction.Name = "GetQuests"
-    getQuestsFunction.Parent = ReplicatedStorage.RemoteFunctions
-end
-
-getQuestsFunction.OnServerInvoke = function(player)
-    checkQuestResets(player)
-    return getActiveQuests(player)
-end
-
-local claimQuestFunction = ReplicatedStorage.RemoteFunctions:FindFirstChild("ClaimQuest")
-if not claimQuestFunction then
-    claimQuestFunction = Instance.new("RemoteFunction")
-    claimQuestFunction.Name = "ClaimQuest"
-    claimQuestFunction.Parent = ReplicatedStorage.RemoteFunctions
-end
-
-claimQuestFunction.OnServerInvoke = function(player, questType, questId)
-    local success, message = claimQuestReward(player, questType, questId)
-    return {success = success, message = message}
-end
-
--- Listen for game events to update quest progress
-local function setupQuestTracking()
-    -- Track egg hatching
-    local eggHatched = ReplicatedStorage.RemoteEvents:FindFirstChild("EggHatched")
-    if eggHatched then
-        eggHatched.OnServerEvent:Connect(function(player)
-            updateQuestProgress(player, "HatchEggs", 1)
-        end)
+-- Initialize quests for new player
+function QuestSystem.InitializePlayerQuests(player)
+    local playerData = DataStore.GetPlayerData(player)
+    if not playerData then return end
+    
+    -- Generate initial quests if none exist
+    if #playerData.Quests.Daily == 0 then
+        QuestSystem.GenerateDailyQuests(player)
     end
     
-    -- Track dragon hatching (for rarity-specific quests)
-    local dragonHatched = ReplicatedStorage.RemoteEvents:FindFirstChild("DragonHatched")
-    if dragonHatched then
-        dragonHatched.OnServerEvent:Connect(function(player, dragon)
-            -- Update collect dragons quest
-            updateQuestProgress(player, "CollectDragons", 1)
-            
-            -- Update hatch rare quest (if dragon is rare+)
-            local rarityIndex = 1
-            for i, rarity in pairs(Config.Dragons.Rarities) do
-                if rarity == dragon.Rarity then
-                    rarityIndex = i
-                    break
-                end
-            end
-            
-            if rarityIndex >= 3 then -- Rare or higher (index 3+)
-                updateQuestProgress(player, "HatchRare", 1)
-            end
-        end)
+    if #playerData.Quests.Weekly == 0 then
+        QuestSystem.GenerateWeeklyQuest(player)
     end
+    
+    QuestSystem.ActiveQuests[player] = {
+        Daily = playerData.Quests.Daily,
+        Weekly = playerData.Quests.Weekly
+    }
 end
 
--- Track other quest types through custom events
-local questProgressFunction = ReplicatedStorage.RemoteFunctions:FindFirstChild("QuestProgress")
-if not questProgressFunction then
-    questProgressFunction = Instance.new("RemoteFunction")
-    questProgressFunction.Name = "QuestProgress"
-    questProgressFunction.Parent = ReplicatedStorage.RemoteFunctions
+-- Player cleanup
+function QuestSystem.OnPlayerRemoving(player)
+    QuestSystem.ActiveQuests[player] = nil
 end
 
-questProgressFunction.OnServerInvoke = function(player, questType, amount)
-    updateQuestProgress(player, questType, amount)
-    return true
+-- Remote function handlers
+ClaimQuestRewardFunction.OnServerInvoke = function(player, questType, questIndex)
+    return QuestSystem.ClaimQuestReward(player, questType, questIndex)
 end
 
--- Player management
-Players.PlayerAdded:Connect(function(player)
-    player.CharacterAdded:Connect(function(character)
-        wait(2) -- Let data load
-        
-        local data = DataAPI.GetData(player)
-        if data then
-            -- Generate initial quests if none exist
-            if Utils.DictLen(data.Quests.Daily) == 0 then
-                generateDailyQuests(player)
-            end
-            
-            if Utils.DictLen(data.Quests.Weekly) == 0 then
-                generateWeeklyQuests(player)
-            end
-            
-            -- Check for resets
-            checkQuestResets(player)
-        end
-    end)
+ClaimDailyRewardFunction.OnServerInvoke = function(player)
+    return QuestSystem.ClaimDailyReward(player)
+end
+
+-- Event listeners for quest progress
+game.ReplicatedStorage.RemoteEvents.DragonHatched.Event:Connect(function(player, dragon)
+    QuestSystem.UpdateQuestProgress(player, "Daily", "hatch", 1)
+    QuestSystem.UpdateQuestProgress(player, "Weekly", "hatch_rarity", 1, {rarity = dragon.Rarity})
 end)
 
--- Setup quest tracking after all remote events are created
-spawn(function()
-    wait(5) -- Wait for all systems to load
-    setupQuestTracking()
+game.ReplicatedStorage.RemoteEvents.DragonFed.Event:Connect(function(player)
+    QuestSystem.UpdateQuestProgress(player, "Daily", "feed", 1)
 end)
 
--- Periodic quest reset check (every 10 minutes)
+game.ReplicatedStorage.RemoteEvents.BreedingStarted.Event:Connect(function(player, dragon1, dragon2, element)
+    QuestSystem.UpdateQuestProgress(player, "Weekly", "breed_fusion", 1, {element = element})
+end)
+
+-- Quest reset checker
 spawn(function()
     while true do
-        wait(600) -- 10 minutes
-        
-        for _, player in pairs(Players:GetPlayers()) do
-            checkQuestResets(player)
+        wait(300) -- Check every 5 minutes
+        for _, player in ipairs(Players:GetPlayers()) do
+            QuestSystem.CheckQuestResets(player)
         end
     end
 end)
 
--- Track additional quest progress through game events
-game.ReplicatedStorage.RemoteEvents.ChildAdded:Connect(function(child)
-    if child.Name == "UpdateCurrency" then
-        child.OnServerEvent:Connect(function(player, coins, gems)
-            -- This is fired when currency is updated, we can track earning
-            -- However, we need a better way to track specifically earned coins vs spent
-        end)
-    end
+-- Event connections
+Players.PlayerAdded:Connect(function(player)
+    -- Wait for data to load
+    wait(2)
+    QuestSystem.InitializePlayerQuests(player)
 end)
 
--- Custom quest tracking functions that other systems can call
-_G.QuestAPI = {
-    UpdateProgress = updateQuestProgress,
-    CheckResets = checkQuestResets,
-    GetQuests = getActiveQuests
-}
+Players.PlayerRemoving:Connect(QuestSystem.OnPlayerRemoving)
 
-print("QuestSystem loaded successfully!")
+return QuestSystem

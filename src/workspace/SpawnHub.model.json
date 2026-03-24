@@ -1,0 +1,482 @@
+{
+  "ClassName": "Model",
+  "Children": [
+    {
+      "Name": "Terrain",
+      "ClassName": "Terrain",
+      "Properties": {
+        "Anchored": true
+      }
+    },
+    {
+      "Name": "Lighting",
+      "ClassName": "Lighting",
+      "Properties": {
+        "Ambient": [0.2, 0.3, 0.4],
+        "Brightness": 1.5,
+        "ColorShift_Bottom": [0.1, 0.15, 0.25],
+        "ColorShift_Top": [0.05, 0.1, 0.2],
+        "FogColor": [0.7, 0.8, 0.9],
+        "FogEnd": 500,
+        "FogStart": 100,
+        "OutdoorAmbient": [0.3, 0.4, 0.5]
+      }
+    },
+    {
+      "Name": "Sky",
+      "ClassName": "Sky",
+      "Properties": {
+        "SkyboxBk": "rbxassetid://12345",
+        "SkyboxDn": "rbxassetid://12345",
+        "SkyboxFt": "rbxassetid://12345",
+        "SkyboxLf": "rbxassetid://12345", 
+        "SkyboxRt": "rbxassetid://12345",
+        "SkyboxUp": "rbxassetid://12345"
+      },
+      "Parent": "Lighting"
+    },
+    {
+      "Name": "CentralFountain",
+      "ClassName": "Model",
+      "Children": [
+        {
+          "Name": "Base",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [30, 3, 30],
+            "Position": [0, 1.5, 0],
+            "Material": "Marble",
+            "Color": [0.9, 0.9, 0.95],
+            "Shape": "Cylinder",
+            "Anchored": true,
+            "CanCollide": true
+          },
+          "Children": [
+            {
+              "Name": "Rim",
+              "ClassName": "Part",
+              "Properties": {
+                "Size": [32, 1, 32],
+                "Position": [0, 1, 0],
+                "Material": "Marble",
+                "Color": [0.8, 0.8, 0.85],
+                "Shape": "Cylinder",
+                "Anchored": true,
+                "CanCollide": false
+              }
+            }
+          ]
+        },
+        {
+          "Name": "WaterPool",
+          "ClassName": "Part", 
+          "Properties": {
+            "Size": [28, 1, 28],
+            "Position": [0, 2.5, 0],
+            "Material": "ForceField",
+            "Color": [0.3, 0.6, 0.9],
+            "Transparency": 0.3,
+            "Shape": "Cylinder",
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "CentralPillar",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [4, 12, 4],
+            "Position": [0, 9, 0],
+            "Material": "Marble",
+            "Color": [0.85, 0.85, 0.9],
+            "Shape": "Cylinder",
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "DragonStatuePlaceholder",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [8, 10, 8],
+            "Position": [0, 20, 0],
+            "Material": "Marble",
+            "Color": [0.7, 0.7, 0.8],
+            "Anchored": true,
+            "CanCollide": false,
+            "Transparency": 0.5
+          }
+        }
+      ]
+    },
+    {
+      "Name": "TradingPlaza",
+      "ClassName": "Model",
+
+      "Children": [
+        {
+          "Name": "Platform", 
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [40, 2, 20],
+            "Position": [-60, 1, 0],
+            "Material": "Brick",
+            "Color": [0.6, 0.5, 0.4],
+            "Anchored": true,
+            "CanCollide": true
+          }
+        },
+        {
+          "Name": "Pillar1",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [2, 12, 2],
+            "Position": [-75, 7, -8],
+            "Material": "Brick",
+            "Color": [0.5, 0.4, 0.3],
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "Pillar2",
+          "ClassName": "Part", 
+          "Properties": {
+            "Size": [2, 12, 2],
+            "Position": [-75, 7, 8],
+            "Material": "Brick", 
+            "Color": [0.5, 0.4, 0.3],
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "Pillar3",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [2, 12, 2],
+            "Position": [-45, 7, -8],
+            "Material": "Brick",
+            "Color": [0.5, 0.4, 0.3],
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "Pillar4",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [2, 12, 2],
+            "Position": [-45, 7, 8],
+            "Material": "Brick",
+            "Color": [0.5, 0.4, 0.3],
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "Roof",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [42, 1, 22],
+            "Position": [-60, 13, 0],
+            "Material": "Slate",
+            "Color": [0.3, 0.2, 0.2],
+            "Anchored": true,
+            "CanCollide": false
+          }
+        }
+      ]
+    },
+    {
+      "Name": "EggShopBuilding",
+      "ClassName": "Model",
+
+      "Children": [
+        {
+          "Name": "MainStructure",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [20, 15, 18],
+            "Position": [60, 7.5, -40],
+            "Material": "Brick",
+            "Color": [0.8, 0.6, 0.4],
+            "Anchored": true,
+            "CanCollide": true
+          }
+        },
+        {
+          "Name": "Roof",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [24, 2, 22],
+            "Position": [60, 16, -40], 
+            "Material": "Slate",
+            "Color": [0.4, 0.2, 0.1],
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "Door",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [3, 8, 0.5],
+            "Position": [60, 4, -31.25],
+            "Material": "Wood",
+            "Color": [0.3, 0.2, 0.1],
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "Window1", 
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [4, 4, 0.5],
+            "Position": [55, 6, -31.25],
+            "Material": "Glass",
+            "Color": [0.8, 0.9, 1],
+            "Transparency": 0.7,
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "Window2",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [4, 4, 0.5],
+            "Position": [65, 6, -31.25],
+            "Material": "Glass",
+            "Color": [0.8, 0.9, 1],
+            "Transparency": 0.7,
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "Sign",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [8, 3, 0.5],
+            "Position": [60, 11, -31],
+            "Material": "Wood",
+            "Color": [0.6, 0.4, 0.2],
+            "Anchored": true,
+            "CanCollide": false
+          }
+        }
+      ]
+    },
+    {
+      "Name": "QuestBoard",
+      "ClassName": "Model",
+
+      "Children": [
+        {
+          "Name": "Post",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [1, 10, 1],
+            "Position": [0, 5, -60],
+            "Material": "Wood",
+            "Color": [0.4, 0.25, 0.1],
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "Board",
+          "ClassName": "Part", 
+          "Properties": {
+            "Size": [12, 8, 0.5],
+            "Position": [0, 8, -60],
+            "Material": "Wood",
+            "Color": [0.5, 0.3, 0.15],
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "Frame",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [13, 9, 0.3],
+            "Position": [0, 8, -59.85],
+            "Material": "Wood", 
+            "Color": [0.3, 0.2, 0.1],
+            "Anchored": true,
+            "CanCollide": false
+          }
+        }
+      ]
+    },
+    {
+      "Name": "Leaderboards",
+      "ClassName": "Model", 
+      "Children": [
+        {
+          "Name": "PowerBoard",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [8, 12, 1],
+            "Position": [-30, 6, -60],
+            "Material": "Metal",
+            "Color": [0.8, 0.8, 0.9],
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "RarityBoard", 
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [8, 12, 1],
+            "Position": [30, 6, -60],
+            "Material": "Metal",
+            "Color": [0.9, 0.8, 0.6],
+            "Anchored": true,
+            "CanCollide": false
+          }
+        }
+      ]
+    },
+    {
+      "Name": "Decorations",
+      "ClassName": "Model",
+      "Children": [
+        {
+          "Name": "Torch1",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [1, 8, 1],
+            "Position": [-20, 4, -30],
+            "Material": "Wood",
+            "Color": [0.4, 0.25, 0.1],
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "Torch2",
+          "ClassName": "Part", 
+          "Properties": {
+            "Size": [1, 8, 1],
+            "Position": [20, 4, -30],
+            "Material": "Wood",
+            "Color": [0.4, 0.25, 0.1],
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "Torch3",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [1, 8, 1],
+            "Position": [-20, 4, 30],
+            "Material": "Wood", 
+            "Color": [0.4, 0.25, 0.1],
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "Torch4",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [1, 8, 1],
+            "Position": [20, 4, 30],
+            "Material": "Wood",
+            "Color": [0.4, 0.25, 0.1],
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "FlowerBed1",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [6, 1, 6],
+            "Position": [-40, 0.5, 20],
+            "Material": "Grass",
+            "Color": [0.3, 0.7, 0.3],
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "FlowerBed2",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [6, 1, 6], 
+            "Position": [40, 0.5, 20],
+            "Material": "Grass",
+            "Color": [0.3, 0.7, 0.3],
+            "Anchored": true,
+            "CanCollide": false
+          }
+        }
+      ]
+    },
+    {
+      "Name": "AreaPortals",
+      "ClassName": "Model",
+      "Children": [
+        {
+          "Name": "PlotPortal",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [8, 12, 2],
+            "Position": [0, 6, 60],
+            "Material": "ForceField",
+            "Color": [0.5, 0.8, 1],
+            "Transparency": 0.3,
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "MeadowPortal",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [6, 10, 2],
+            "Position": [80, 5, 0],
+            "Material": "ForceField", 
+            "Color": [0.4, 0.8, 0.4],
+            "Transparency": 0.3,
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "CavernsPortal",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [6, 10, 2],
+            "Position": [0, 5, 80], 
+            "Material": "ForceField",
+            "Color": [0.6, 0.8, 1],
+            "Transparency": 0.3,
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "ShadowPortal",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [6, 10, 2],
+            "Position": [-80, 5, 0],
+            "Material": "ForceField",
+            "Color": [0.3, 0.2, 0.6],
+            "Transparency": 0.3,
+            "Anchored": true,
+            "CanCollide": false
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,469 @@
+{
+  "ClassName": "Model", 
+  "Children": [
+    {
+      "Name": "PlotBoundary",
+      "ClassName": "Model",
+      "Children": [
+        {
+          "Name": "Ground",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [80, 2, 80],
+            "Position": [0, -1, 0],
+            "Material": "Grass",
+            "Color": [0.3, 0.7, 0.3],
+            "Anchored": true,
+            "CanCollide": true
+          }
+        },
+        {
+          "Name": "Fence1",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [1, 6, 80],
+            "Position": [-40, 3, 0],
+            "Material": "Wood",
+            "Color": [0.4, 0.25, 0.1],
+            "Anchored": true,
+            "CanCollide": true
+          }
+        },
+        {
+          "Name": "Fence2",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [1, 6, 80],
+            "Position": [40, 3, 0],
+            "Material": "Wood", 
+            "Color": [0.4, 0.25, 0.1],
+            "Anchored": true,
+            "CanCollide": true
+          }
+        },
+        {
+          "Name": "Fence3",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [80, 6, 1],
+            "Position": [0, 3, -40],
+            "Material": "Wood",
+            "Color": [0.4, 0.25, 0.1],
+            "Anchored": true,
+            "CanCollide": true
+          }
+        },
+        {
+          "Name": "Fence4", 
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [80, 6, 1],
+            "Position": [0, 3, 40],
+            "Material": "Wood",
+            "Color": [0.4, 0.25, 0.1],
+            "Anchored": true,
+            "CanCollide": true
+          }
+        }
+      ]
+    },
+    {
+      "Name": "IncubatorArea",
+      "ClassName": "Model",
+      "Children": [
+        {
+          "Name": "Platform",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [20, 1, 8],
+            "Position": [-25, 0.5, -25],
+            "Material": "Cobblestone",
+            "Color": [0.6, 0.6, 0.7],
+            "Anchored": true,
+            "CanCollide": true
+          }
+        },
+        {
+          "Name": "Incubator1",
+          "ClassName": "Model",
+          "Children": [
+            {
+              "Name": "Base",
+              "ClassName": "Part",
+              "Properties": {
+                "Size": [4, 3, 4],
+                "Position": [-30, 2.5, -25],
+                "Material": "Metal",
+                "Color": [0.7, 0.7, 0.8],
+                "Shape": "Cylinder",
+                "Anchored": true,
+                "CanCollide": true
+              }
+            },
+            {
+              "Name": "Bowl",
+              "ClassName": "Part",
+              "Properties": {
+                "Size": [3.5, 1, 3.5],
+                "Position": [-30, 4.5, -25],
+                "Material": "Marble",
+                "Color": [0.9, 0.9, 0.95],
+                "Shape": "Cylinder",
+                "Anchored": true,
+                "CanCollide": false
+              }
+            },
+            {
+              "Name": "HeatingElement",
+              "ClassName": "Part",
+              "Properties": {
+                "Size": [1, 0.5, 1],
+                "Position": [-30, 2, -25],
+                "Material": "Neon",
+                "Color": [1, 0.5, 0.2],
+                "Anchored": true,
+                "CanCollide": false
+              }
+            }
+          ]
+        },
+        {
+          "Name": "Incubator2Slot",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [4, 1, 4],
+            "Position": [-24, 1, -25],
+            "Material": "Cobblestone",
+            "Color": [0.5, 0.5, 0.6],
+            "Shape": "Cylinder", 
+            "Anchored": true,
+            "CanCollide": false,
+            "Transparency": 0.7
+          }
+        },
+        {
+          "Name": "Incubator3Slot",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [4, 1, 4],
+            "Position": [-18, 1, -25],
+            "Material": "Cobblestone",
+            "Color": [0.5, 0.5, 0.6],
+            "Shape": "Cylinder",
+            "Anchored": true,
+            "CanCollide": false,
+            "Transparency": 0.7
+          }
+        }
+      ]
+    },
+    {
+      "Name": "DragonPen",
+      "ClassName": "Model",
+      "Children": [
+        {
+          "Name": "PenGround",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [25, 1, 25],
+            "Position": [15, 0.5, 0],
+            "Material": "Sand",
+            "Color": [0.8, 0.7, 0.5],
+            "Anchored": true,
+            "CanCollide": true
+          }
+        },
+        {
+          "Name": "PenFence1",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [1, 4, 25],
+            "Position": [2.5, 2.5, 0],
+            "Material": "Wood",
+            "Color": [0.5, 0.3, 0.15],
+            "Anchored": true,
+            "CanCollide": true
+          }
+        },
+        {
+          "Name": "PenFence2",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [1, 4, 25],
+            "Position": [27.5, 2.5, 0],
+            "Material": "Wood",
+            "Color": [0.5, 0.3, 0.15],
+            "Anchored": true,
+            "CanCollide": true
+          }
+        },
+        {
+          "Name": "PenFence3",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [25, 4, 1],
+            "Position": [15, 2.5, -12.5],
+            "Material": "Wood", 
+            "Color": [0.5, 0.3, 0.15],
+            "Anchored": true,
+            "CanCollide": true
+          }
+        },
+        {
+          "Name": "PenFence4",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [25, 4, 1],
+            "Position": [15, 2.5, 12.5],
+            "Material": "Wood",
+            "Color": [0.5, 0.3, 0.15],
+            "Anchored": true,
+            "CanCollide": true
+          }
+        },
+        {
+          "Name": "PenGate",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [4, 4, 0.5],
+            "Position": [15, 2.5, 12.75],
+            "Material": "Wood",
+            "Color": [0.4, 0.2, 0.1],
+            "Anchored": true,
+            "CanCollide": false
+          }
+        }
+      ]
+    },
+    {
+      "Name": "FoodBowl",
+      "ClassName": "Model",
+      "Children": [
+        {
+          "Name": "Bowl",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [3, 1.5, 3],
+            "Position": [10, 1.25, 8],
+            "Material": "Metal",
+            "Color": [0.6, 0.6, 0.7],
+            "Shape": "Cylinder",
+            "Anchored": true,
+            "CanCollide": true
+          }
+        },
+        {
+          "Name": "Food",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [2.5, 0.5, 2.5],
+            "Position": [10, 2, 8],
+            "Material": "Grass",
+            "Color": [0.4, 0.8, 0.2],
+            "Shape": "Cylinder",
+            "Anchored": true,
+            "CanCollide": false
+          }
+        }
+      ]
+    },
+    {
+      "Name": "BreedingAltarSlot",
+      "ClassName": "Model",
+      "Children": [
+        {
+          "Name": "Foundation",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [12, 2, 12],
+            "Position": [-15, 1, 20],
+            "Material": "Cobblestone", 
+            "Color": [0.5, 0.5, 0.6],
+            "Shape": "Cylinder",
+            "Anchored": true,
+            "CanCollide": true,
+            "Transparency": 0.5
+          }
+        },
+        {
+          "Name": "Placeholder",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [8, 4, 8],
+            "Position": [-15, 4, 20],
+            "Material": "ForceField",
+            "Color": [0.7, 0.6, 1],
+            "Transparency": 0.8,
+            "Anchored": true,
+            "CanCollide": false
+          }
+        }
+      ]
+    },
+    {
+      "Name": "ExpeditionBoard",
+      "ClassName": "Model",
+      "Children": [
+        {
+          "Name": "Post",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [1, 8, 1],
+            "Position": [25, 4, 20],
+            "Material": "Wood",
+            "Color": [0.4, 0.25, 0.1],
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "Board",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [8, 6, 0.5],
+            "Position": [25, 6, 20],
+            "Material": "Wood",
+            "Color": [0.5, 0.3, 0.15], 
+            "Anchored": true,
+            "CanCollide": false
+          }
+        }
+      ]
+    },
+    {
+      "Name": "TrophyShelf",
+      "ClassName": "Model",
+      "Children": [
+        {
+          "Name": "Shelf",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [12, 1, 3],
+            "Position": [0, 3, -35],
+            "Material": "Wood",
+            "Color": [0.5, 0.3, 0.15],
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "Back",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [12, 8, 1],
+            "Position": [0, 6, -36],
+            "Material": "Wood",
+            "Color": [0.4, 0.25, 0.1],
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "DisplayCase1",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [3, 3, 2],
+            "Position": [-4, 4.5, -35],
+            "Material": "Glass",
+            "Color": [0.9, 0.9, 1],
+            "Transparency": 0.8,
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "DisplayCase2", 
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [3, 3, 2],
+            "Position": [0, 4.5, -35],
+            "Material": "Glass",
+            "Color": [0.9, 0.9, 1],
+            "Transparency": 0.8,
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "DisplayCase3",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [3, 3, 2],
+            "Position": [4, 4.5, -35],
+            "Material": "Glass",
+            "Color": [0.9, 0.9, 1],
+            "Transparency": 0.8,
+            "Anchored": true,
+            "CanCollide": false
+          }
+        }
+      ]
+    },
+    {
+      "Name": "PathToHub",
+      "ClassName": "Part",
+      "Properties": {
+        "Size": [6, 0.5, 20],
+        "Position": [0, 0.25, 30],
+        "Material": "Cobblestone",
+        "Color": [0.6, 0.6, 0.7], 
+        "Anchored": true,
+        "CanCollide": true
+      }
+    },
+    {
+      "Name": "Decorations",
+      "ClassName": "Model",
+      "Children": [
+        {
+          "Name": "FlowerPatch1",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [4, 1, 4],
+            "Position": [-30, 0.5, 10],
+            "Material": "Grass",
+            "Color": [0.2, 0.8, 0.3],
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "FlowerPatch2",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [4, 1, 4],
+            "Position": [30, 0.5, -10],
+            "Material": "Grass",
+            "Color": [0.2, 0.8, 0.3],
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "WateringCan",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [1, 2, 1.5],
+            "Position": [8, 1, -30],
+            "Material": "Metal",
+            "Color": [0.7, 0.7, 0.8],
+            "Anchored": true,
+            "CanCollide": false
+          }
+        },
+        {
+          "Name": "DragonToy",
+          "ClassName": "Part",
+          "Properties": {
+            "Size": [2, 2, 3],
+            "Position": [20, 1, 5],
+            "Material": "Plastic",
+            "Color": [1, 0.4, 0.2],
+            "Anchored": true,
+            "CanCollide": false
+          }
+        }
+      ]
+    }
+  ]
+}
